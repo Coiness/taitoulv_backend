@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.services.yolo_service import yolo_service
 from app.api.auth.routes import router as auth_router
+from app.api.auth.routes import public_router as auth_public_router
 from app.api.video.routes import router as video_router
 
 # 创建数据库表
@@ -37,6 +38,7 @@ uploads_dir.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 路由配置
+app.include_router(auth_public_router, prefix="/api/auth/public", tags=["auth_public"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(video_router, prefix="/api/video", tags=["video"])
 

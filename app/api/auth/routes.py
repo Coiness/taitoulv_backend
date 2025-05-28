@@ -11,7 +11,8 @@ from app.services.auth import authenticate_user, create_access_token, get_passwo
 from app.models.user import User
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+public_router = APIRouter() # 公共路由，不需要身份验证
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/public/login")
 
 # 用户注册请求模型
 class UserCreate(BaseModel):
@@ -49,7 +50,7 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-@router.post("/register")
+@public_router.post("/register")
 async def register(
     user: UserCreate,
     db: Session = Depends(get_db)
@@ -72,11 +73,16 @@ async def register(
     
     return {"message": "注册成功"}
 
-@router.post("/login")
+@public_router.post("/login")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    print("=====登录数据请求=====")
+    print(f"用户名:{form_data.username}")
+    print(f"密码{'*'*len(form_data.password) if form_data.password else 'None'}")
+    print("=====================")
+
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

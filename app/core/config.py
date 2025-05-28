@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.45
     
+    # 临时标记：是否启用YOLO处理（在模型准备好之前设为False）
+    ENABLE_YOLO: bool = os.getenv("ENABLE_YOLO", "false").lower() == "true"
+    
     class Config:
         case_sensitive = True
 

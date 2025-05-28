@@ -63,7 +63,7 @@ async def video_stream(websocket: WebSocket):
         await websocket.close()
 
 @router.post("/upload")
-async def upload_video(
+async def upload_file(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -75,17 +75,6 @@ async def upload_video(
         raise HTTPException(
             status_code=400,
             detail="Invalid file type. Supported types: mp4, avi, mov"
-        )
-    
-    # 检查文件大小
-    file.file.seek(0, 2)
-    size = file.file.tell()
-    file.file.seek(0)
-    
-    if size > settings.MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size: {settings.MAX_UPLOAD_SIZE/1024/1024}MB"
         )
     
     # 创建用户专属的视频保存目录
@@ -102,38 +91,22 @@ async def upload_video(
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # 处理视频
-        result = await yolo_service.process_video(file_path)
-        
-        if result["status"] == "success":
-            # 创建视频会话记录
-            video_session = VideoSession(
-                user_id=current_user.id,
-                average_head_up_rate=result["average_head_up_rate"],
-                session_duration=result["video_info"]["duration"]
-            )
-            db.add(video_session)
-            
-            # 保存每一帧的分析结果
-            for frame_result in result["results"]:
-                analysis = VideoAnalysis(
-                    user_id=current_user.id,
-                    session_id=video_session.id,
-                    timestamp=datetime.fromtimestamp(frame_result["timestamp"]),
-                    tilt_up_rate=frame_result["head_up_rate"],
-                    is_attentive=frame_result["head_up_rate"] > 0.5,  # 可根据需求调整阈值
-                    confidence=max([det["confidence"] for det in frame_result["detections"]], default=0.0)
-                )
-                db.add(analysis)
-            
-            await db.commit()
-            
-            return {
-                "status": "success",
-                "filename": unique_filename,
-                "session_id": video_session.id,
-                "result": result
+        if settings.ENABLE_YOLO:
+            # 如果启用了YOLO，进行视频处理
+            result = await yolo_service.process_video(file_path)
+        else:
+            # 如果未启用YOLO，返回基本信息
+            result = {
+                'status': 'success',
+                'message': 'File uploaded successfully (YOLO processing disabled)',
+                'file_path': str(file_path)
             }
+        
+        return {
+            "filename": unique_filename,
+            "status": "success",
+            "result": result
+        }
             
     except Exception as e:
         # 如果处理失败，删除上传的文件

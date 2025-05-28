@@ -15,11 +15,11 @@ fi
 # 检查并创建虚拟环境
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv venv
+    python3 -m venv taitoulv
 fi
 
 # 激活虚拟环境
-source venv/bin/activate
+source taitoulv/bin/activate
 
 # 安装/更新依赖
 echo "Installing/updating dependencies..."
