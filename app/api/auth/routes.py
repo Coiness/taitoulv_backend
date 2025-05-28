@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status,Form,Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -52,19 +52,22 @@ async def get_current_user(
 
 @public_router.post("/register")
 async def register(
-    user: UserCreate,
+    username: str = Form(...),
+    password: str = Form(...),
+    email: EmailStr = Form(...),
     db: Session = Depends(get_db)
 ):
+    #emial会自动验证格式，如果格式不正确会抛出ValidationError
     # 检查用户是否已存在
-    db_user = db.query(User).filter(User.username == user.username).first()
+    db_user = db.query(User).filter(User.username == username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="用户名已存在")
     
     # 创建新用户
-    hashed_password = get_password_hash(user.password)
+    hashed_password = get_password_hash(password)
     db_user = User(
-        username=user.username,
-        email=user.email,
+        username=username,
+        email=email,
         hashed_password=hashed_password
     )
     db.add(db_user)
@@ -75,15 +78,19 @@ async def register(
 
 @public_router.post("/login")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request,
     db: Session = Depends(get_db)
 ):
+    form_data = await request.form()
+    email = form_data.get("email")
+    password = form_data.get("password")
+
     print("=====登录数据请求=====")
-    print(f"用户名:{form_data.username}")
-    print(f"密码{'*'*len(form_data.password) if form_data.password else 'None'}")
+    print(f"用户邮箱:{email}")
+    print(f"密码{'*'*len(password) if password else 'None'}")
     print("=====================")
 
-    user = await authenticate_user(db, form_data.username, form_data.password)
+    user = await authenticate_user(db, email, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
