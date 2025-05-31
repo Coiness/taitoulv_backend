@@ -31,3 +31,11 @@ async def authenticate_user(db, username: str, password: str):
     if not verify_password(password, user.hashed_password):
         return False
     return user
+
+async def authenticate_user_by_email(db, email: str, password: str):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user

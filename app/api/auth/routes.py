@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.services.auth import authenticate_user, create_access_token, get_password_hash
+from app.services.auth import authenticate_user, create_access_token, get_password_hash,authenticate_user_by_email
 from app.models.user import User
 
 router = APIRouter()
@@ -85,24 +85,50 @@ async def login(
     email = form_data.get("email")
     password = form_data.get("password")
 
-    print("=====登录数据请求=====")
-    print(f"用户邮箱:{email}")
-    print(f"密码{'*'*len(password) if password else 'None'}")
-    print("=====================")
 
-    user = await authenticate_user(db, email, password)
+    user = await authenticate_user_by_email(db, email, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误",
+            detail="用户邮箱或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    print("token:", access_token)
+    # 返回token和用户名
+    username = user.username
+    return {"access_token": access_token, "token_type": "bearer","username": username}
 
 @router.post("/logout")
 async def logout():
     # 由于JWT是无状态的，服务器端不需要特殊处理
     # 客户端需要删除本地存储的token
     return {"message": "登出成功"}
+
+
+# 添加密码重置请求模型
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    password_new: str
+
+@public_router.post("/forgot")
+async def forgot_password(
+    email: EmailStr = Form(...),
+    password_new: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    # 检查用户是否存在
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 更新密码
+    print("新密码:", password_new)
+    hashed_password = get_password_hash(password_new)
+    user.hashed_password = hashed_password
+    
+    # 提交更改到数据库
+    db.commit()
+    
+    return {"message": "密码已成功重置"}
