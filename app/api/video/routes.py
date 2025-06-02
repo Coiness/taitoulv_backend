@@ -48,6 +48,7 @@ async def video_stream(websocket: WebSocket):
                 "timestamp": result["timestamp"],
                 "detections": result["detections"],
                 "head_up_rate": result["head_up_rate"],
+                "visualization": result["visualization"],  # 可视化图像的Base64编码
                 "average_head_up_rate": total_head_up_rate / frame_count if frame_count > 0 else 0
             })
             

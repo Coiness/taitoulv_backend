@@ -110,6 +110,7 @@ class YOLO8Service:
                         'head_up_rate': detection_result['head_up_rate']
                     }
                     
+                    print("visualization:", detection_result.get('visualization', None))
                     # 如果有可视化，也添加
                     if 'visualization' in detection_result:
                         frame_result['visualization'] = detection_result['visualization']
@@ -170,6 +171,7 @@ class YOLO8Service:
             _, buffer = cv2.imencode('.jpg', visualized_img)
             img_str = base64.b64encode(buffer).decode('utf-8')
             
+            
             return {
                 'detections': detections,
                 'head_up_rate': head_up_rate,
@@ -211,5 +213,30 @@ class YOLO8Service:
         
         return head_up_count / total_count if total_count > 0 else 0.0
 
+    def _visualize_results(self, image: np.ndarray, result) -> np.ndarray:
+        """自定义可视化结果，与示例代码效果一致"""
+        img = image.copy()
+        
+        # 处理所有检测到的框
+        boxes = result.boxes
+        for box in boxes:
+            # 获取边界框坐标
+            x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
+            
+            # 获取类别和置信度
+            cls = int(box.cls[0])
+            conf = float(box.conf[0])
+            
+            # 设置标签文本和颜色（类别0为绿色，类别1为红色）
+            label = f'Class {cls}: {conf:.2f}'
+            color = (0, 255, 0) if cls == 0 else (0, 0, 255)
+            
+            # 绘制矩形框
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+            
+            # 添加标签文本
+            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        return img
 # 创建服务实例
 yolo_service = YOLO8Service()
