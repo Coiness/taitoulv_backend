@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     YOLO5_MODEL_PATH: str = os.getenv("YOLO5_MODEL_PATH", "app/models/best.pt")
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.45
+
+    # YOLOv8配置
+    YOLO8_MODEL_PATH: str = os.getenv("YOLO8_MODEL_PATH", "app/models/yolov8_best.pt")
+    YOLO8_CONFIDENCE_THRESHOLD: float = 0.5
+    YOLO8_IOU_THRESHOLD: float = 0.45
     
     # 临时标记：是否启用YOLO处理（在模型准备好之前设为False）
     ENABLE_YOLO: bool = os.getenv("ENABLE_YOLO", "true").lower() == "true"

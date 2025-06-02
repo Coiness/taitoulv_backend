@@ -7,7 +7,7 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.services.yolo_service import yolo_service
+from app.services.yolo_service_new import yolo_service
 from app.api.auth.routes import router as auth_router
 from app.api.auth.routes import public_router as auth_public_router
 from app.api.video.routes import router as video_router

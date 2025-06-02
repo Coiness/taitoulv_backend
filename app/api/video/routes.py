@@ -7,7 +7,7 @@ import shutil
 import cv2
 import numpy as np
 from app.core.config import settings
-from app.services.yolo_service import yolo_service
+from app.services.yolo_service_new import yolo_service
 from app.core.database import get_db
 from app.models.video import VideoSession, VideoAnalysis
 from sqlalchemy.orm import Session
