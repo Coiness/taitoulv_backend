@@ -13,21 +13,32 @@ class YOLO5Service:
         self.is_initialized = False
 
     async def initialize(self):
-        """初始化YOLO5模型"""
+        """初始化YOLO模型"""
+        print("初始化YOLO模型")
         if not self.is_initialized:
             try:
+                print(f"加载模型，路径: {settings.YOLO5_MODEL_PATH}")
+                print(f"使用设备: {self.device}")
                 self.model = torch.hub.load('ultralytics/yolov5', 'custom',
                                           path=settings.YOLO5_MODEL_PATH,
                                           device=self.device)
+                print("模型加载成功!")
                 self.model.conf = settings.CONFIDENCE_THRESHOLD
                 self.model.iou = settings.IOU_THRESHOLD
                 self.is_initialized = True
+                print("模型参数设置完成")
             except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"模型加载失败: {str(e)}")
+                self.model = None
+                self.is_initialized = False
                 raise Exception(f"Failed to load YOLO5 model: {str(e)}")
-        return True
+        return self.is_initialized
 
     async def process_image(self, image_path: Union[str, Path]) -> Dict:
         """处理单张图片"""
+        print("处理单张图片")
         if not self.is_initialized:
             await self.initialize()
         
@@ -59,6 +70,7 @@ class YOLO5Service:
 
     async def process_video(self, video_path: Union[str, Path]) -> Dict:
         """处理视频文件"""
+        print("处理视频文件")
         if not self.is_initialized:
             await self.initialize()
         
@@ -115,9 +127,22 @@ class YOLO5Service:
 
     async def process_frame(self, frame: np.ndarray) -> Dict:
         """处理单个视频帧"""
+        print("处理单个视频帧")
+
+        if not self.is_initialized or self.model is None:
+            print("模型未初始化，尝试初始化")
+            await self.initialize()
+            if self.model is None:
+                raise Exception("模型初始化失败，无法处理视频帧")
+
+
+
         try:
+            print("视频帧-初始化模型")
             results = self.model(frame)
+            print("视频帧-解析结果")
             detections = self._parse_results(results)
+            print("视频帧-计算抬头率")
             head_up_rate = self._calculate_head_up_rate(detections)
             
             return {

@@ -38,12 +38,12 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "mp4", "avi", "mov"]
     
     # YOLO5配置
-    YOLO5_MODEL_PATH: str = os.getenv("YOLO5_MODEL_PATH", "models/yolov5s.pt")
+    YOLO5_MODEL_PATH: str = os.getenv("YOLO5_MODEL_PATH", "app/models/best.pt")
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.45
     
     # 临时标记：是否启用YOLO处理（在模型准备好之前设为False）
-    ENABLE_YOLO: bool = os.getenv("ENABLE_YOLO", "false").lower() == "true"
+    ENABLE_YOLO: bool = os.getenv("ENABLE_YOLO", "true").lower() == "true"
     
     class Config:
         case_sensitive = True
