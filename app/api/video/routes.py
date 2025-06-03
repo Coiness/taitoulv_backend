@@ -63,61 +63,6 @@ async def video_stream(websocket: WebSocket):
             # TODO: 更新数据库中的会话信息
         await websocket.close()
 
-@router.post("/upload")
-async def upload_file(
-    file: UploadFile = File(...),
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """处理上传的视频文件"""
-    # 检查文件扩展名
-    file_ext = file.filename.split('.')[-1].lower()
-    if file_ext not in ["mp4", "avi", "mov"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file type. Supported types: mp4, avi, mov"
-        )
-    
-    # 创建用户专属的视频保存目录
-    user_video_dir = settings.UPLOAD_DIR / str(current_user.id) / "videos"
-    user_video_dir.mkdir(exist_ok=True, parents=True)
-    
-    # 生成唯一文件名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_filename = f"{timestamp}_{file.filename}"
-    file_path = user_video_dir / unique_filename
-    
-    try:
-        # 保存视频文件
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        if settings.ENABLE_YOLO:
-            # 如果启用了YOLO，进行视频处理
-            result = await yolo_service.process_video(file_path)
-        else:
-            # 如果未启用YOLO，返回基本信息
-            result = {
-                'status': 'success',
-                'message': 'File uploaded successfully (YOLO processing disabled)',
-                'file_path': str(file_path)
-            }
-        
-        return {
-            "filename": unique_filename,
-            "status": "success",
-            "result": result
-        }
-            
-    except Exception as e:
-        # 如果处理失败，删除上传的文件
-        file_path.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error processing video: {str(e)}"
-        )
-    finally:
-        file.file.close()
 
 @router.post("/upload/image")
 async def upload_image(
@@ -172,7 +117,7 @@ async def upload_image(
                 confidence=max([det["confidence"] for det in result["detections"]], default=0.0)
             )
             db.add(analysis)
-            await db.commit()
+            db.commit()
             
             return {
                 "status": "success",
@@ -211,37 +156,3 @@ async def get_user_sessions(
         "average_head_up_rate": session.average_head_up_rate,
         "session_duration": session.session_duration
     } for session in sessions]
-
-@router.get("/sessions/{session_id}/analysis")
-async def get_session_analysis(
-    session_id: int,
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-) -> List[Dict[str, Any]]:
-    """获取特定会话的详细分析数据"""
-    # 获取会话信息
-    session = db.query(VideoSession).filter(VideoSession.id == session_id).first()
-    if not session:
-        raise HTTPException(
-            status_code=404,
-            detail="Session not found"
-        )
-    
-    # 检查权限
-    if session.user_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this session"
-        )
-    
-    # 获取分析数据
-    analyses = db.query(VideoAnalysis).filter(
-        VideoAnalysis.session_id == session_id
-    ).order_by(VideoAnalysis.timestamp).all()
-    
-    return [{
-        "timestamp": analysis.timestamp,
-        "tilt_up_rate": analysis.tilt_up_rate,
-        "is_attentive": analysis.is_attentive,
-        "confidence": analysis.confidence
-    } for analysis in analyses]
